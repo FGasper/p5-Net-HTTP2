@@ -1,4 +1,4 @@
-package Net::HTTP2::Client::AnyEvent;
+package Net::HTTP2::Client::IOAsync;
 
 use strict;
 use warnings;

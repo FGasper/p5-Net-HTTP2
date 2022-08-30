@@ -5,11 +5,30 @@ use warnings;
 
 =head1 NAME
 
-Net::HTTP2::Client - Full-featured HTTP/2 client base class
+Net::HTTP2::Client - HTTP/2 client base class
+
+=head1 SYNOPSIS
+
+    use Net::HTTP2::Client::Mojo;
+
+    Net::HTTP2::Client::Mojo->new()->request(
+        GET => 'https://perl.com',
+    )->then(
+        sub ($response) {
+            # Handle the Net::HTTP2::Response
+        }
+    )->wait();
+
+L<Net::HTTP2::Client::AnyEvent> and L<Net::HTTP2::Client::IOAsync>
+exist as well for L<AnyEvent> and L<IO::Async>, respectively.
+
+=head1 DESCRIPTION
+
+This class implements base functionality for an HTTP/2 client in Perl.
 
 =cut
 
-# perl -I ../p5-X-Tiny/lib -MData::Dumper -MAnyEvent -I ../p5-IO-SigGuard/lib -I ../p5-Promise-ES6/lib -Ilib -MNet::HTTP2::Client -e'my $h2 = Net::HTTP2::Client->new(); my $cv = AnyEvent->condvar(); $h2->request("GET", "https://google.com")->then( sub { print Dumper shift } )->finally($cv); $cv->recv();'
+# perl -I ../p5-X-Tiny/lib -MData::Dumper -MAnyEvent -I ../p5-IO-SigGuard/lib -I ../p5-Promise-ES6/lib -Ilib -MNet::HTTP2::Client::Mojo -e'my $h2 = Net::HTTP2::Client::Mojo->new(); $h2->request("GET", "https://google.com")->then( sub { print Dumper shift } )->wait();'
 
 #----------------------------------------------------------------------
 
@@ -17,18 +36,32 @@ use Carp ();
 use URI::Split ();
 
 use Net::HTTP2::Constants ();
+use Net::HTTP2::Client::ConnectionPool ();
 
 use constant _SIMPLE_REDIRECTS => (
     301, 308,
     302, 307,
 );
 
+use constant _FORBIDDEN => ('port');
+
 #----------------------------------------------------------------------
 
 sub new {
+    my ($class, %opts) = @_;
+
+    my @bad = grep { defined $opts{$_} } _FORBIDDEN;
+    Carp::croak "Forbidden: @bad" if @bad;
+
+    delete @opts{ _FORBIDDEN() };
+
     return bless {
-        host_port_client => { },
-    }, shift;
+        host_port_conn => { },
+        conn_pool => Net::HTTP2::Client::ConnectionPool->new(
+            $class->_CLIENT_IO(),
+            \%opts,
+        ),
+    }, $class;
 }
 
 sub _split_uri_auth {
@@ -57,9 +90,7 @@ sub request {
 
     my ($host, $port) = _split_uri_auth($auth);
 
-    my $host_port_conn_hr = $self->{'host_port_client'};
-
-    my $conn_ns = $self->_get_conn_namespace();
+    my $host_port_conn_hr = $self->{'host_port_conn'};
 
     my $path_and_query = $path;
     if (defined $query && length $query) {
@@ -67,8 +98,7 @@ sub request {
     }
 
     return _request_recurse(
-        $conn_ns,
-        $host_port_conn_hr,
+        $self->{'conn_pool'},
         $method,
         $host,
         $port,
@@ -78,11 +108,11 @@ sub request {
 }
 
 sub _request_recurse {
-    my ($conn_ns, $host_port_conn_hr, $method, $host, $port, $path_and_query, @opts_kv) = @_;
+    my ($conn_pool, $method, $host, $port, $path_and_query, @opts_kv) = @_;
 
-    my $conn = _get_conn( $conn_ns, $host_port_conn_hr, $host, $port, @opts_kv );
+    my $conn = $conn_pool->get_connection($host, $port);
 
-    return _request_once( $conn, $method, $path_and_query )->then(
+    return $conn->request($method, $path_and_query, @opts_kv)->then(
         sub {
             my $resp = shift;
 
@@ -105,7 +135,7 @@ sub _request_recurse {
                 $host = $new_host;
                 $port = $new_port;
 
-                return _request_recurse( $conn_ns, $host_port_conn_hr, $method, $host, $port, $path_and_query, @opts_kv );
+                return _request_recurse( $conn_pool, $method, $host, $port, $path_and_query, @opts_kv );
             }
 
             return $resp;
@@ -137,34 +167,6 @@ sub _consume_location {
     }
 
     return ($host, $port, $path_and_query);
-}
-
-sub _get_conn {
-    my ($conn_ns, $host_port_conn_hr, $host, $port) = @_;
-
-    return $host_port_conn_hr->{$host}{$port || q<>} ||= $conn_ns->new(
-        $host,
-        ($port == Net::HTTP2::Constants::HTTPS_PORT ? () : (port => $port)),
-    );
-}
-
-sub _request_once {
-    my ($conn, $method, $path_and_query, @opts_kv) = @_;
-
-    return $conn->request($method, $path_and_query);
-}
-
-sub _get_conn_namespace {
-    my $self = shift;
-
-    return $self->{'_conn_ns'} ||= do {
-        my $ns = "Net::HTTP2::Client::Connection::" . $self->_CLIENT_IO();
-
-        local $@;
-        Carp::croak $@ if !eval "require $ns";
-
-        $ns;
-    };
 }
 
 1;

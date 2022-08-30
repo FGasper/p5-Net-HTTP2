@@ -1,4 +1,4 @@
-package Net::HTTP2::Client::AnyEvent;
+package Net::HTTP2::Client::Mojo;
 
 use strict;
 use warnings;
