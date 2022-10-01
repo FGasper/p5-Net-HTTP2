@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+configure_requires 'ExtUtils::MakeMaker::CPANfile';
+
 requires 'Net::SSLeay';
 requires 'X::Tiny';
 requires 'Protocol::HTTP2';
