@@ -62,6 +62,8 @@ sub _start_io_if_needed {
         my $weak_self = $self;
         Scalar::Util::weaken($weak_self);
 
+        my $read_chunk;
+
         AnyEvent::Handle->new(
             connect => [$host, $port],
             tls => 'connect',
@@ -79,9 +81,13 @@ sub _start_io_if_needed {
             },
 
             on_read => sub {
-                $h2->feed(
-                    substr($_[0]->rbuf, 0, length $_[0]->rbuf, q<>),
-                );
+
+                # NB: This doesn’t empty out rbuf in pre-5.16 perls:
+                # substr( $_[0]->rbuf, 0, length($_[0]->rbuf), q<> )
+                $read_chunk = $_[0]->rbuf();
+                $_[0]->rbuf() = q<>;
+
+                $h2->feed($read_chunk);
             },
         );
     };
