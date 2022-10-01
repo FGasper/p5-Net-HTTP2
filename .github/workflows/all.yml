@@ -36,7 +36,7 @@ jobs:
           - '5.16'
           - '5.14'
           - '5.12'
-          - '5.10'
+          # - '5.10' needs https://github.com/vlet/p5-Protocol-HTTP2/pull/13
 
     container:
       image: perldocker/perl-tester:${{ matrix.perl-version }}
