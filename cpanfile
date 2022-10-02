@@ -2,12 +2,12 @@
 
 configure_requires 'ExtUtils::MakeMaker::CPANfile';
 
-requires 'Net::SSLeay';
-requires 'X::Tiny';
+requires 'Net::SSLeay' => 1.92;
+requires 'X::Tiny' => 0.22;
 requires 'Protocol::HTTP2';
 requires 'Scalar::Util';
 requires 'URI::Split';
-requires 'Promise::ES6';
+requires 'Promise::ES6' => 0.25;
 
 on test => sub {
     requires 'Test::More';

@@ -1,5 +1,11 @@
 use ExtUtils::MakeMaker::CPANfile;
 
+if (eval { require Net::SSLeay }) {
+    if (!Net::SSLeay->can('CTX_set_alpn_protos')) {
+        die sprintf "Net::SSLeay::CTX_set_alpn_protos() is missing; is your OpenSSL (%s) outdated?\n", Net::SSLeay::SSLeay_version(Net::SSLeay::SSLEAY_VERSION());
+    }
+}
+
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 WriteMakefile(

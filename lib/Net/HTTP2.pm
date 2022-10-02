@@ -3,7 +3,7 @@ package Net::HTTP2;
 use strict;
 use warnings;
 
-our $VERSION = '0.01_01';
+our $VERSION = '0.01';
 
 =encoding utf-8
 
