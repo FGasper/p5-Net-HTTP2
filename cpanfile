@@ -2,7 +2,7 @@
 
 configure_requires 'ExtUtils::MakeMaker::CPANfile';
 
-requires 'Net::SSLeay' => 1.92;
+requires 'Net::SSLeay' => '1.90';
 requires 'X::Tiny' => 0.22;
 requires 'Protocol::HTTP2';
 requires 'Scalar::Util';

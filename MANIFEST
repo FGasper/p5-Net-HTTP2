@@ -4,6 +4,7 @@ MANIFEST
 Makefile.PL
 README.md
 cpanfile
+examples/anyevent.pl
 lib/Net/HTTP2.pm
 lib/Net/HTTP2/Client.pm
 lib/Net/HTTP2/Client/AnyEvent.pm
