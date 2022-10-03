@@ -119,3 +119,49 @@ jobs:
       - name: make test
         run: cd $GITHUB_WORKSPACE; make test
         shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
+
+  BSDs:
+    runs-on: macos-10.15
+
+    name: ${{ matrix.os.pretty_name }} ${{ matrix.os.version }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - name: freebsd
+            pretty_name: FreeBSD (OpenSSL)
+            version: '13.0'
+            pkginstall: pkg install -y p5-ExtUtils-MakeMaker p5-App-cpanminus openssl openssl-devel
+          - name: freebsd
+            pretty_name: FreeBSD (LibreSSL)
+            version: '13.0'
+            pkginstall: pkg install -y p5-ExtUtils-MakeMaker p5-App-cpanminus libressl libressl-devel
+          - name: openbsd
+            pretty_name: OpenBSD
+            version: '6.9'
+            pkginstall: pkg_add curl
+          - name: openbsd
+            pretty_name: OpenBSD
+            version: '7.1'
+            pkginstall: pkg_add curl
+
+    steps:
+      - uses: actions/checkout@main
+        with:
+          submodules: recursive
+
+      - name: Test on ${{ matrix.os.name }}
+        uses: cross-platform-actions/action@master
+        env:
+          AUTOMATED_TESTING: 1
+        with:
+          operating_system: ${{ matrix.os.name }}
+          version: ${{ matrix.os.version }}
+          shell: bash
+          run: |
+            sudo ${{ matrix.os.pkginstall }};
+            which cpanm || curl https://cpanmin.us | perl - --sudo App::cpanminus
+            cpanm --verbose --notest --installdeps --with-configure .;
+            perl Makefile.PL;
+            prove -wlvmb t;
