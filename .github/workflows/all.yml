@@ -162,6 +162,6 @@ jobs:
           run: |
             sudo ${{ matrix.os.pkginstall }};
             which cpanm || curl https://cpanmin.us | perl - --sudo App::cpanminus
-            cpanm --verbose --notest --installdeps --with-configure .;
+            cpanm --sudo --verbose --notest --installdeps --with-configure .;
             perl Makefile.PL;
             prove -wlvmb t;
